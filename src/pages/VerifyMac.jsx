@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 export default function VerifyUser() {
   const [aadhaar, setAadhaar] = useState('');
   const [pin, setPin] = useState('');
-  const [step, setStep] = useState(1); // 1: Check Aadhaar, 2: Set PIN, 3: Success
+  const [step, setStep] = useState(1); 
   const [userData, setUserData] = useState(null);
+  const [isExistingUser, setIsExistingUser] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -27,78 +28,102 @@ export default function VerifyUser() {
       const data = await res.json();
       
       if (res.status === 404) {
-        navigate('/'); // Redirect to Register if not found
+        navigate('/'); 
       } else if (res.ok) {
         setUserData(data.user);
-        setStep(2); // Move to Set PIN step
+        setIsExistingUser(data.hasPin);
+        setStep(2);
       } else {
         setError(data.message);
       }
-    } catch (err) {
-      setError("Server connection failed");
-    }
+    } catch (err) { setError("Server error"); }
   };
 
-  const handleSetPin = async (e) => {
+  const handleAction = async (e) => {
     e.preventDefault();
+    const endpoint = isExistingUser ? 'api/login-number' : 'api/update-pin';
+    const payload = isExistingUser 
+      ? { generatedNumber: userData.customId, pin } 
+      : { aadhaar, pin };
+
     try {
-      const res = await fetch('http://localhost:5000/api/update-pin', {
+      const res = await fetch(`http://localhost:5000/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aadhaar, pin })
+        body: JSON.stringify(payload)
       });
+      const data = await res.json();
+
       if (res.ok) {
-        setStep(3); // Move to Success step
+        if (isExistingUser) {
+          localStorage.setItem('activeUser', JSON.stringify(data.user));
+          navigate('/sms-dashboard');
+        } else {
+          setStep(3);
+        }
       } else {
-        setError("Failed to set PIN");
+        setError(data.message);
       }
-    } catch (err) {
-      setError("Server connection failed");
-    }
+    } catch (err) { setError("Action failed"); }
   };
 
   return (
-    <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-      <h2 className="text-xl font-bold mb-4 text-slate-800 border-b pb-2">
-        {step === 1 ? "Verify Aadhaar" : step === 2 ? "Set Your PIN" : "Setup Complete"}
+    <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md mx-auto mt-10">
+      <h2 className="text-xl font-bold mb-4 text-slate-800 border-b pb-2 text-center uppercase tracking-tighter">
+        {step === 3 ? "Success" : step === 1 ? "Identity Check" : isExistingUser ? "Welcome Back" : "Security Setup"}
       </h2>
 
       {step === 1 && (
         <form onSubmit={checkAadhaarExists} className="space-y-4">
-          <label className="block text-xs font-bold text-slate-600">ENTER AADHAAR NUMBER</label>
-          <input 
-            placeholder="XXXX XXXX XXXX" 
-            className="w-full p-2 border rounded font-mono text-lg" 
-            value={aadhaar} 
-            onChange={handleAadhaarChange} 
-            required 
-          />
-          {error && <p className="text-red-500 text-xs text-center">{error}</p>}
-          <button className="w-full bg-blue-600 text-white py-2 rounded font-bold">CONTINUE</button>
+          <label className="block text-[10px] font-black text-slate-500 uppercase">Aadhaar Number</label>
+          <input placeholder="XXXX XXXX XXXX" className="w-full p-3 border rounded font-mono text-lg outline-none focus:ring-2 focus:ring-slate-900" value={aadhaar} onChange={handleAadhaarChange} required />
+          {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
+          <button className="w-full bg-slate-900 text-white py-3 rounded font-bold">VERIFY IDENTITY</button>
         </form>
       )}
 
       {step === 2 && (
-        <form onSubmit={handleSetPin} className="space-y-4">
-          <p className="text-sm text-slate-500 italic">Welcome, {userData?.name}. Please set a 4-digit PIN for your number: <b>{userData?.newNumber}</b></p>
-          <input 
-            type="password" 
-            placeholder="Set 4-Digit PIN" 
-            maxLength="4" 
-            className="w-full p-2 border rounded text-center text-2xl tracking-widest"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-            required
-          />
-          <button className="w-full bg-green-600 text-white py-2 rounded font-bold">SET PIN & FINISH</button>
+        <form onSubmit={handleAction} className="space-y-4">
+          <div className={`p-4 rounded-lg border ${isExistingUser ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-200'}`}>
+            <p className={`text-sm font-bold ${isExistingUser ? 'text-amber-700' : 'text-indigo-700'}`}>
+              {isExistingUser ? "Account already active!" : `Verified: ${userData?.name}`}
+            </p>
+            <p className="text-xs text-slate-600 mt-1">
+              {isExistingUser ? "Enter PIN to login." : "Create a 4-digit PIN to activate your ID."}
+            </p>
+          </div>
+
+          <input type="password" placeholder="PIN" maxLength="4" className="w-full p-3 border rounded text-center text-3xl tracking-[0.5em] font-bold outline-none focus:ring-2 focus:ring-slate-900" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} required />
+          
+          {error && <p className="text-red-500 text-xs text-center font-bold">{error}</p>}
+          
+          <button className={`w-full text-white py-4 rounded-lg font-black transition-all ${isExistingUser ? 'bg-amber-600' : 'bg-slate-900'}`}>
+            {isExistingUser ? "LOGIN" : "ACTIVATE NOW"}
+          </button>
         </form>
       )}
 
       {step === 3 && (
-        <div className="text-center py-4 bg-green-50 rounded-lg">
-          <h1 className="text-2xl font-bold text-green-700">PIN Set Successfully!</h1>
-          <p className="text-slate-600 mt-2">You can now login using your generated number.</p>
-          <button onClick={() => navigate('/login')} className="mt-4 bg-slate-800 text-white px-6 py-2 rounded">Go to Login</button>
+        <div className="text-center py-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 text-green-600 rounded-full mb-4">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          
+          <h1 className="text-sm font-black text-slate-400 uppercase tracking-widest">Registration Successful</h1>
+          <p className="text-slate-600 text-xs mt-1">Save your User ID for future logins</p>
+          
+          <div className="my-8 p-6 bg-slate-900 rounded-2xl shadow-2xl transform scale-110 border-4 border-white ring-2 ring-slate-900">
+            <p className="text-slate-400 text-[10px] font-black uppercase mb-1">Your Login ID</p>
+            <h3 className="text-5xl font-black text-white tracking-tighter italic">
+              {userData?.customId}
+            </h3>
+          </div>
+
+          <button onClick={() => navigate('/login')} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-black shadow-lg shadow-blue-200 transition-all">
+            GO TO LOGIN
+          </button>
         </div>
       )}
     </div>
