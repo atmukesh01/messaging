@@ -8,13 +8,18 @@ export default function LoginSms() {
   const [setupRedirect, setSetupRedirect] = useState(null); 
   const navigate = useNavigate();
 
+  // FIX: This defines where the server is
+  const API_URL = import.meta.env.VITE_API_URL || 'http://10.178.83.49:5000';
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setSetupRedirect(null);
 
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/login-number', {
+      // FIX: Changed 'http://127.0.0.1:5000' to `${API_URL}`
+      // This allows the client device to find your computer on the network
+      const res = await fetch(`${API_URL}/api/login-number`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -33,10 +38,12 @@ export default function LoginSms() {
       } else if (res.status === 403) {
         setSetupRedirect(data.newNumber); 
       } else {
-        setError(data.message);
+        setError(data.message || "Login failed");
       }
     } catch (err) {
+      // This will now only trigger if the network is actually down
       setError("Server connection failed");
+      console.error("Login Error:", err);
     }
   };
 
@@ -49,8 +56,8 @@ export default function LoginSms() {
           <div>
             <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">User ID or Number</label>
             <input 
-              placeholder="e.g. MUK396" 
               className="w-full p-3 border-2 border-slate-50 rounded-lg text-lg uppercase font-bold outline-none focus:border-indigo-500 transition-all" 
+                placeholder="HERE" 
               value={identifier}
               onChange={e => setIdentifier(e.target.value)} 
               required
@@ -61,7 +68,7 @@ export default function LoginSms() {
             <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Secure PIN</label>
             <input 
               type="password"
-              placeholder="••••" 
+              placeholder="----" 
               maxLength="4"
               className="w-full p-3 border-2 border-slate-50 rounded-lg text-lg tracking-[0.3em] outline-none focus:border-indigo-500 text-center font-bold transition-all" 
               value={pin}

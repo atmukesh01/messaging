@@ -8,6 +8,7 @@ import FetchNum from './pages/fetchnum';
 function Navigation() {
   const location = useLocation();
   const isHome = location.pathname === "/";
+  const API_URL = import.meta.env.VITE_API_URL || 'http://10.178.83.49:5000';
 
   const navContainerClass = isHome
     ? "flex flex-col items-center justify-center min-h-screen space-y-8"

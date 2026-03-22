@@ -2,23 +2,19 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', mobile: '', aadhaar: '', mac: '', provider: 'Airtel' });
+  const [form, setForm] = useState({ name: '', mobile: '', aadhaar: '', provider: 'Airtel' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  
+  // FIX: Centralized API URL
+  const API_URL = import.meta.env.VITE_API_URL || 'http://10.178.83.49:5000';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setError('');
 
-    if (name === 'mac') {
-      let cleanValue = value.replace(/[^a-fA-F0-9]/g, '').toUpperCase();
-      let formatted = cleanValue.match(/.{1,2}/g)?.join(':') || cleanValue;
-      if (formatted.length <= 17) {
-        setForm({ ...form, mac: formatted });
-      }
-    } 
-    else if (name === 'aadhaar') {
+    if (name === 'aadhaar') {
       let cleanValue = value.replace(/\D/g, '');
       let formatted = cleanValue.match(/.{1,4}/g)?.join(' ') || cleanValue;
       if (formatted.length <= 14) {
@@ -39,7 +35,8 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/register', {
+      // FIX: Changed 'http://localhost:5000' to `${API_URL}`
+      const res = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -52,7 +49,8 @@ export default function Register() {
         setError(data.message);
       }
     } catch (err) {
-      setError("Server connection failed");
+      setError("Server connection failed. Check hotspot/firewall.");
+      console.error("Registration Error:", err);
     } finally {
       setLoading(false);
     }
@@ -78,6 +76,7 @@ export default function Register() {
           />
         </div>
 
+        {/* MOBILE FIELD */}
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1">MOBILE NUMBER</label>
           <input 
@@ -91,6 +90,7 @@ export default function Register() {
           />
         </div>
 
+        {/* AADHAAR FIELD */}
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1">AADHAAR NUMBER</label>
           <input 
@@ -103,18 +103,7 @@ export default function Register() {
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">DEVICE MAC ADDRESS</label>
-          <input 
-            name="mac" 
-            placeholder="XX:XX:XX:XX:XX:XX" 
-            className="w-full p-2 border rounded font-mono focus:ring-2 focus:ring-blue-500 outline-none" 
-            value={form.mac} 
-            onChange={handleInputChange} 
-            required 
-          />
-        </div>
-
+        {/* PROVIDER FIELD */}
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1">NETWORK PROVIDER</label>
           <select 
