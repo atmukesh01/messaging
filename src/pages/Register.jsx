@@ -8,7 +8,7 @@ export default function Register() {
   const navigate = useNavigate();
   
   // FIX: Centralized API URL
-  const API_URL = import.meta.env.VITE_API_URL || 'http://10.178.83.49:5000';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://10.41.105.49:5000';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

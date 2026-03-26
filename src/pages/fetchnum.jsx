@@ -7,7 +7,7 @@ export default function FetchNum() {
   const [copied, setCopied] = useState(false);
   
   // FIX: Centralized API URL
-  const API_URL = import.meta.env.VITE_API_URL || 'http://10.178.83.49:5000';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://10.41.105.49:5000';
 
   const handleFetch = async (e) => {
     e.preventDefault();

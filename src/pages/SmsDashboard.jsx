@@ -11,13 +11,16 @@ export default function SmsDashboard() {
   const [messageBody, setMessageBody] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   
-  const API_URL = import.meta.env.VITE_API_URL || 'http://10.178.83.49:5000';
+  const API_URL = 'http://10.41.105.49:5000';
   const navigate = useNavigate();
 
   useEffect(() => {
     const data = localStorage.getItem('activeUser');
-    if (!data) navigate('/login');
-    else setUser(JSON.parse(data));
+    if (!data) {
+        navigate('/login');
+    } else {
+        setUser(JSON.parse(data));
+    }
   }, [navigate]);
 
   const fetchData = async () => {
@@ -36,11 +39,16 @@ export default function SmsDashboard() {
       const endpoint = endpoints[activeTab];
       if (endpoint) {
         const res = await fetch(`${API_URL}/api/${endpoint}`);
-        if (res.ok) setMessages(await res.json());
+        if (res.ok) {
+            const data = await res.json();
+            setMessages(data);
+        }
       } else {
         setMessages([]);
       }
-    } catch (e) { console.error("Fetch Error:", e); }
+    } catch (e) { 
+        console.error("Fetch Error:", e); 
+    }
   };
 
   useEffect(() => { fetchData(); }, [activeTab, user]);
@@ -48,18 +56,18 @@ export default function SmsDashboard() {
   const formatDate = (dateString) => {
     if (!dateString) return "Recent";
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   const handleClearTrash = async () => {
-    if (!window.confirm("Permanently delete all messages in trash? This cannot be undone.")) return;
+    if (!window.confirm("Permanently delete all messages in trash?")) return;
     try {
       const res = await fetch(`${API_URL}/api/clear-trash/${user.newNumber}`, { method: 'DELETE' });
       if (res.ok) {
         setMessages([]);
-        alert("Trash cleared successfully");
+        alert("Trash cleared");
       }
-    } catch (e) { console.error("Error clearing trash:", e); }
+    } catch (e) { alert("Action failed"); }
   };
 
   const handleRecipientChange = (index, val) => {
@@ -97,22 +105,23 @@ export default function SmsDashboard() {
             setActiveTab(scheduledTime ? 'scheduled' : 'sent');
             fetchData();
         } else {
-            // This will show the error if numbers aren't registered
             alert(`Error: ${data.message}`);
         }
     } catch (err) {
-        alert("Server connection failed");
+        alert("Server connection failed. Check if Backend is running at " + API_URL);
     }
   };
 
   const handleDeleteMessage = async (messageId) => {
     if (!window.confirm("Move to trash?")) return;
-    const res = await fetch(`${API_URL}/api/delete-message`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messageId, userNumber: user.newNumber })
-    });
-    if (res.ok) fetchData();
+    try {
+        const res = await fetch(`${API_URL}/api/delete-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId, userNumber: user.newNumber })
+        });
+        if (res.ok) fetchData();
+    } catch (e) { alert("Delete failed"); }
   };
 
   const getLimits = () => {
@@ -129,6 +138,7 @@ export default function SmsDashboard() {
 
   return (
     <div className="flex h-screen w-full bg-slate-200 font-sans overflow-hidden">
+      {/* Sidebar */}
       <div className="w-64 bg-slate-900 text-white flex flex-col h-full shrink-0">
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-xl font-black italic text-blue-500">SMS PORTAL</h1>
@@ -147,12 +157,13 @@ export default function SmsDashboard() {
         </nav>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <header className="bg-white border-b px-8 py-4 shrink-0 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-black uppercase italic text-slate-800">{activeTab}</h2>
             {activeTab === 'trash' && messages.length > 0 && (
-              <button onClick={handleClearTrash} className="px-4 py-1.5 bg-red-600 text-white text-[10px] font-black rounded-full uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg active:scale-95">
+              <button onClick={handleClearTrash} className="px-4 py-1.5 bg-red-600 text-white text-[10px] font-black rounded-full uppercase tracking-widest hover:bg-red-700">
                 Empty Trash
               </button>
             )}
@@ -165,15 +176,12 @@ export default function SmsDashboard() {
 
         <main className="flex-1 p-6 bg-slate-100 overflow-hidden flex flex-col items-center">
           {activeTab === 'compose' && (
-            <div className="bg-white p-8 rounded-[2rem] shadow-xl w-full max-w-6xl h-full max-h-[550px] border flex gap-8 overflow-hidden">
+            <div className="bg-white p-8 rounded-[2rem] shadow-xl w-full max-w-6xl h-full max-h-[550px] border flex gap-8">
               <div className="w-1/3 border-r pr-8 flex flex-col">
                 <div className="mb-6">
                   <label className="text-[10px] font-black text-blue-600 uppercase mb-2 block tracking-widest">Select Group</label>
-                  <select 
-                    value={selectedGroup} 
-                    onChange={(e) => setSelectedGroup(e.target.value)}
-                    className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl font-bold text-sm outline-none text-slate-700 appearance-none"
-                  >
+                  <select value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)}
+                    className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl font-bold text-sm outline-none text-slate-700">
                     <option value="">Choose group</option>
                     {groups.map(g => (
                       <option key={g.id} value={g.id}>{g.group_name}</option>
@@ -207,7 +215,7 @@ export default function SmsDashboard() {
               <div className="flex-1 flex flex-col">
                 <textarea className="flex-1 w-full p-6 bg-slate-50 rounded-2xl font-medium outline-none border focus:border-blue-500 resize-none"
                   placeholder="Type message..." value={messageBody} onChange={(e) => setMessageBody(e.target.value)} />
-                <button onClick={handleSend} className="w-full mt-6 bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg">
+                <button onClick={handleSend} className="w-full mt-6 bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">
                     {scheduledTime ? "Schedule Message" : "Dispatch Now"}
                 </button>
               </div>
@@ -218,7 +226,7 @@ export default function SmsDashboard() {
             <div className="w-full max-w-6xl h-full bg-white rounded-[2rem] shadow-xl border overflow-hidden flex flex-col">
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {messages.length > 0 ? messages.map(m => (
-                  <div key={m.id} className="p-4 bg-slate-50 rounded-xl flex justify-between items-center border border-slate-200 transition-all">
+                  <div key={m.id} className="p-4 bg-slate-50 rounded-xl flex justify-between items-center border border-slate-200">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-[9px] font-black text-blue-500 uppercase">
@@ -234,7 +242,7 @@ export default function SmsDashboard() {
                       <span className="text-[8px] font-bold text-slate-400 uppercase">{formatDate(m.timestamp)}</span>
                     </div>
                     {activeTab !== 'trash' && (
-                      <button onClick={() => handleDeleteMessage(m.id)} className="ml-4 px-4 py-2 bg-red-50 text-red-500 text-[10px] font-black rounded-lg border border-red-100 uppercase hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                      <button onClick={() => handleDeleteMessage(m.id)} className="ml-4 px-4 py-2 bg-red-50 text-red-500 text-[10px] font-black rounded-lg border border-red-100 uppercase hover:bg-red-600 hover:text-white transition-all">
                         Delete
                       </button>
                     )}
@@ -253,11 +261,14 @@ export default function SmsDashboard() {
                    <button onClick={async () => {
                       const n = document.getElementById('gName').value;
                       const m = document.getElementById('gMems').value;
+                      if(!n || !m) return alert("Fill details");
                       await fetch(`${API_URL}/api/create-group`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: n, members: m, creator: user.newNumber })
                       });
+                      document.getElementById('gName').value = '';
+                      document.getElementById('gMems').value = '';
                       fetchData();
                    }} className="w-full mt-4 bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-[10px]">Create group</button>
                 </div>
@@ -274,7 +285,7 @@ export default function SmsDashboard() {
                              await fetch(`${API_URL}/api/delete-group/${g.id}`, { method: 'DELETE' }); 
                              fetchData(); 
                            } 
-                         }} className="px-4 py-2 bg-red-50 text-red-500 font-black text-[10px] uppercase border border-red-100 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                         }} className="px-4 py-2 bg-red-50 text-red-500 font-black text-[10px] uppercase border border-red-100 rounded-lg hover:bg-red-600 hover:text-white transition-all">
                             Delete
                          </button>
                       </div>

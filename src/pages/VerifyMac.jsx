@@ -10,8 +10,7 @@ export default function VerifyUser() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   
-  // FIX: Centralized API URL for hotspot/network access
-  const API_URL = import.meta.env.VITE_API_URL || 'http://10.178.83.49:5000';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://10.41.105.49:5000';
 
   const handleAadhaarChange = (e) => {
     let value = e.target.value.replace(/\D/g, '');
